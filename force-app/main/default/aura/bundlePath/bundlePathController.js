@@ -1,4 +1,20 @@
 ({
+    subscribe: function (component, event) {
+        var empApi = component.find("empApi");
+        var channel = component.get("v.channel");
+        var replayId = -2;
+        empApi.subscribe(channel, replayId, $A.getCallback(function (message) {
+            var bundle = component.get("v.record");
+            if (message && message.data && message.data.sobject) {
+                var bundleId = message.data.sobject.Id;
+                var status = message.data.sobject.Status__c;
+                if (bundleId === bundle.Id && status !== bundle.Status__c) {
+                    component.find("bundleRecord").reloadRecord(true);
+                }
+            }
+        }));        
+    },
+
     onStepChange: function (component, event) {
         var bundle = component.get("v.record");
         if (bundle) {
@@ -13,25 +29,11 @@
     onRecordUpdated: function (component, event) {
         var changeType = event.getParams().changeType;
         if (changeType === "LOADED") {
-            component.find("accountService").reloadRecord();
+            component.find("accountService").reloadRecord();          
         } else if (changeType === "CHANGED") {
             component.find("bundleRecord").reloadRecord();
             component.find("accountService").reloadRecord();
-        }
-    },
-
-    messageHandler: function (component, event) {
-        var bundle = component.get("v.record");
-        var payload = event.getParam("message");
-        if (payload.Bundle_Id__c === bundle.Id) {
-            bundle.Status__c = "Ordered by Distributor";
-            bundle.Account__c = payload.Account_Id__c;
-            bundle.Date_Ordered__c = new Date().toLocaleDateString();
-            component.set("v.record", bundle);
-            component.find("accountService").reloadRecord();
-            // No need to save the record because there is also an Apex listener for the Bundle_Ordered__e event
-
-        }
+        } 
     }
 
 })
